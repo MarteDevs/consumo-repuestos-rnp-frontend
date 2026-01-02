@@ -34,3 +34,17 @@ export interface Location {
   name: string;
   type: string; // 'MINA' | 'TALLER'
 }
+
+
+// Datos completos de una orden para el historial
+export interface Order {
+  id: number;
+  poot_number: string;
+  order_date: string;
+  maintenance_type: string;
+  equipment: { internal_code: string }; // Solo nos interesa el código
+  mechanic: { full_name: string };
+  supervisor: { full_name: string };
+  total_cost: number; // El calculado en el backend
+  items_count: number;
+}

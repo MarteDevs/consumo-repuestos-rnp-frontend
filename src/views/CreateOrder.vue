@@ -174,6 +174,11 @@ const submitOrder = async () => {
           </h2>
         </div>
       </div>
+      <div class="mb-4">
+        <router-link to="/" class="text-sm text-indigo-600 hover:text-indigo-900 font-medium">
+          &larr; Volver al Historial
+        </router-link>
+      </div>
 
       <div v-if="message" :class="`mb-4 p-4 rounded-md font-medium border ${message.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`">
         {{ message.text }}
