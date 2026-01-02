@@ -1,19 +1,32 @@
 import { createRouter, createWebHistory } from 'vue-router';
+// Importamos las 3 vistas
+import DashboardStats from '../views/DashboardStats.vue'; // <--- NUEVO
+import OrdersList from '../views/OrdersList.vue';
 import CreateOrder from '../views/CreateOrder.vue';
-import OrdersList from '../views/OrdersList.vue'; // <--- Importar nueva vista
+import OrderDetail from '../views/OrderDetail.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: OrdersList // <--- Ahora el Home es la lista
+      name: 'dashboard',
+      component: DashboardStats // <--- Ahora el home es el Dashboard
+    },
+    {
+      path: '/list', // <--- Movimos la lista aquí
+      name: 'list',
+      component: OrdersList
     },
     {
       path: '/create',
       name: 'create',
-      component: CreateOrder // <--- Movemos el registro aquí
+      component: CreateOrder
+    },
+    {
+      path: '/orders/:id',
+      name: 'order-detail',
+      component: OrderDetail
     }
   ]
 });

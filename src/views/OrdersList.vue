@@ -32,6 +32,9 @@ onMounted(async () => {
       
       <div class="sm:flex sm:items-center">
         <div class="sm:flex-auto">
+          <router-link to="/" class="text-indigo-600 hover:text-indigo-900 font-medium text-sm mb-2 inline-block">
+            &larr; Volver al Dashboard
+          </router-link>
           <h1 class="text-2xl font-bold leading-6 text-gray-900">Historial de Consumo</h1>
           <p class="mt-2 text-sm text-gray-700">Lista completa de todas las órdenes de trabajo y costos asociados.</p>
         </div>
@@ -78,7 +81,12 @@ onMounted(async () => {
                     <td class="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500">{{ order.items_count }} items</td>
                     <td class="whitespace-nowrap px-3 py-4 text-sm text-right font-bold text-gray-900">S/. {{ order.total_cost.toFixed(2) }}</td>
                     <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                      <a href="#" class="text-indigo-600 hover:text-indigo-900">Ver<span class="sr-only">, {{ order.poot_number }}</span></a>
+                      <router-link 
+                        :to="`/orders/${order.id}`" 
+                        class="text-indigo-600 hover:text-indigo-900 font-bold"
+                      >
+                        Ver Detalles
+                      </router-link>
                     </td>
                   </tr>
                   <tr v-if="orders.length === 0 && !loading">
