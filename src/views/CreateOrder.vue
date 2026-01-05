@@ -17,8 +17,18 @@ const mechanics = ref<Personnel[]>([]);    // Lista de Mecánicos
 const supervisors = ref<Personnel[]>([]);  // Lista de Supervisores
 const searchResults = ref<Product[]>([]);
 
+// Función auxiliar para obtener fecha hoy en formato YYYY-MM-DD
+const getTodayString = () => {
+  const date = new Date();
+  // Ajuste manual para zona horaria local
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+  return localDate.toISOString().split('T')[0];
+};
+
 // Formulario Cabecera
 const form = ref({
+  order_date: getTodayString(), // <--- NUEVO CAMPO (Por defecto HOY)
   poot_number: '',
   equipment_id: 0,
   location_id: 0,       // Nuevo: Área de Destino
@@ -189,7 +199,18 @@ const submitOrder = async () => {
           <h3 class="text-base font-semibold leading-6 text-gray-900 mb-6 border-b pb-2">Información General</h3>
           
           <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-            
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium leading-6 text-gray-900">Fecha de Orden</label>
+              <div class="mt-2">
+                <input 
+                  v-model="form.order_date" 
+                  type="date" 
+                  class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 pl-3"
+                >
+              </div>
+            </div>
+
+
             <div class="sm:col-span-2">
               <label class="block text-sm font-medium leading-6 text-gray-900">N° POOT</label>
               <div class="mt-2">
