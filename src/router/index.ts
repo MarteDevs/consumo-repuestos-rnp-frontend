@@ -4,6 +4,7 @@ import DashboardStats from '../views/DashboardStats.vue'; // <--- NUEVO
 import OrdersList from '../views/OrdersList.vue';
 import CreateOrder from '../views/CreateOrder.vue';
 import OrderDetail from '../views/OrderDetail.vue';
+import ProductInventory from '../views/ProductInventory.vue'; // <--- NUEVO
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,6 +28,11 @@ const router = createRouter({
       path: '/orders/:id',
       name: 'order-detail',
       component: OrderDetail
+    },
+    {
+      path: '/inventory',
+      name: 'inventory',
+      component: ProductInventory
     }
   ]
 });

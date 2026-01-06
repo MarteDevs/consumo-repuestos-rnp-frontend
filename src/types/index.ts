@@ -48,3 +48,28 @@ export interface Order {
   total_cost: number; // El calculado en el backend
   items_count: number;
 }
+
+
+// --- GESTIÓN DE INVENTARIO ---
+
+export interface Brand {
+  id: number;
+  name: string;
+}
+
+export interface ProductVariant {
+  id: number;
+  brand_id: number;
+  unit_price: number;
+  currency: 'PEN' | 'USD';
+  is_active: boolean;
+  brands?: Brand; // Para mostrar el nombre de la marca (plural como en Prisma)
+}
+
+export interface ProductCatalog {
+  id: number;
+  name: string;
+  part_number: string;
+  unit_of_measure: string;
+  product_variants: ProductVariant[];
+}
