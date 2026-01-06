@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue';
 import api from '../api/axios';
 import type { Location } from '../types';
+import Toast from '../components/Toast.vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 
 // --- ESTADO ---
 const locations = ref<Location[]>([]);
@@ -16,6 +18,51 @@ const form = ref({
   name: '',
   type: 'MINA'
 });
+
+// Toast notifications
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'info' as 'success' | 'error' | 'warning' | 'info'
+});
+
+const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+  toast.value = { show: true, message, type };
+};
+
+const closeToast = () => {
+  toast.value.show = false;
+};
+
+// Confirm dialog
+const confirmDialog = ref({
+  show: false,
+  message: '',
+  locationId: 0
+});
+
+const showConfirmDelete = (id: number) => {
+  confirmDialog.value = {
+    show: true,
+    message: '¿Seguro que deseas eliminar esta ubicación?',
+    locationId: id
+  };
+};
+
+const handleConfirmDelete = async () => {
+  confirmDialog.value.show = false;
+  try {
+    await api.delete(`/locations/${confirmDialog.value.locationId}`);
+    showToast('Ubicación eliminada correctamente', 'success');
+    fetchLocations();
+  } catch (error: any) {
+    showToast(error.response?.data?.message || 'Error al eliminar la ubicación', 'error');
+  }
+};
+
+const handleCancelDelete = () => {
+  confirmDialog.value.show = false;
+};
 
 // --- LÓGICA ---
 const fetchLocations = async () => {
@@ -48,31 +95,28 @@ const openEdit = (loc: Location) => {
 };
 
 const saveLocation = async () => {
-  if (!form.value.name) return alert('El nombre es obligatorio');
+  if (!form.value.name) {
+    showToast('El nombre es obligatorio', 'warning');
+    return;
+  }
 
   try {
     if (isEditing.value) {
       await api.put(`/locations/${form.value.id}`, form.value);
-      alert('✅ Ubicación actualizada');
+      showToast('Ubicación actualizada correctamente', 'success');
     } else {
       await api.post('/locations', form.value);
-      alert('✅ Ubicación creada');
+      showToast('Ubicación creada correctamente', 'success');
     }
     showModal.value = false;
     fetchLocations();
   } catch (error: any) {
-    alert('❌ Error: ' + (error.response?.data?.message || 'Error desconocido'));
+    showToast(error.response?.data?.message || 'Error al guardar la ubicación', 'error');
   }
 };
 
-const deleteLocation = async (id: number) => {
-  if (!confirm('¿Seguro que deseas eliminar esta ubicación?')) return;
-  try {
-    await api.delete(`/locations/${id}`);
-    fetchLocations();
-  } catch (error: any) {
-    alert('❌ ' + (error.response?.data?.message || 'Error al eliminar'));
-  }
+const deleteLocation = (id: number) => {
+  showConfirmDelete(id);
 };
 
 // Colores para las etiquetas de tipo
@@ -173,4 +217,22 @@ const getTypeClass = (type: string) => {
 
     </div>
   </div>
+
+  <Toast
+    :show="toast.show"
+    :message="toast.message"
+    :type="toast.type"
+    @close="closeToast"
+  />
+
+  <ConfirmDialog
+    :show="confirmDialog.show"
+    :message="confirmDialog.message"
+    title="Eliminar Ubicación"
+    confirm-text="Eliminar"
+    cancel-text="Cancelar"
+    type="danger"
+    @confirm="handleConfirmDelete"
+    @cancel="handleCancelDelete"
+  />
 </template>

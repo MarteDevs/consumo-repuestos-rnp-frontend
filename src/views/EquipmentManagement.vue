@@ -2,6 +2,8 @@
 import { ref, onMounted, computed } from 'vue';
 import api from '../api/axios';
 import type { Equipment, Brand, Location } from '../types';
+import Toast from '../components/Toast.vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 
 // --- ESTADO ---
 const equipments = ref<Equipment[]>([]);
@@ -26,6 +28,51 @@ const form = ref({
   accumulated_feet: 0,
   status: 'OPERATIVO'
 });
+
+// Toast notifications
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'info' as 'success' | 'error' | 'warning' | 'info'
+});
+
+const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+  toast.value = { show: true, message, type };
+};
+
+const closeToast = () => {
+  toast.value.show = false;
+};
+
+// Confirm dialog
+const confirmDialog = ref({
+  show: false,
+  message: '',
+  equipmentId: 0
+});
+
+const showConfirmDelete = (id: number) => {
+  confirmDialog.value = {
+    show: true,
+    message: '¿Seguro que deseas dar de BAJA este equipo?',
+    equipmentId: id
+  };
+};
+
+const handleConfirmDelete = async () => {
+  confirmDialog.value.show = false;
+  try {
+    await api.delete(`/equipments/${confirmDialog.value.equipmentId}`);
+    showToast('Equipo dado de baja correctamente', 'success');
+    loadData();
+  } catch (error: any) {
+    showToast(error.response?.data?.message || 'Error al dar de baja el equipo', 'error');
+  }
+};
+
+const handleCancelDelete = () => {
+  confirmDialog.value.show = false;
+};
 
 // --- CARGA DE DATOS ---
 const loadData = async () => {
@@ -94,34 +141,29 @@ const openEdit = (eq: Equipment) => {
 
 const saveEquipment = async () => {
   if (!form.value.internal_code || !form.value.brand_id) {
-    return alert('Código y Marca son obligatorios');
+    showToast('Código y Marca son obligatorios', 'warning');
+    return;
   }
 
   try {
     if (isEditing.value) {
       // EDITAR
       await api.put(`/equipments/${form.value.id}`, form.value);
-      alert('✅ Equipo actualizado');
+      showToast('Equipo actualizado correctamente', 'success');
     } else {
       // CREAR
       await api.post('/equipments', form.value);
-      alert('✅ Equipo registrado');
+      showToast('Equipo registrado correctamente', 'success');
     }
     showModal.value = false;
     loadData();
   } catch (error: any) {
-    alert('❌ Error: ' + (error.response?.data?.message || 'Error desconocido'));
+    showToast(error.response?.data?.message || 'Error al guardar el equipo', 'error');
   }
 };
 
-const deleteEquipment = async (id: number) => {
-  if (!confirm('¿Seguro que deseas dar de BAJA este equipo?')) return;
-  try {
-    await api.delete(`/equipments/${id}`);
-    loadData();
-  } catch (error) {
-    alert('Error al dar de baja');
-  }
+const deleteEquipment = (id: number) => {
+  showConfirmDelete(id);
 };
 
 // Utilidad para colores de estado
@@ -279,4 +321,22 @@ const getStatusClass = (status: string) => {
 
     </div>
   </div>
+
+  <Toast
+    :show="toast.show"
+    :message="toast.message"
+    :type="toast.type"
+    @close="closeToast"
+  />
+
+  <ConfirmDialog
+    :show="confirmDialog.show"
+    :message="confirmDialog.message"
+    title="Dar de Baja Equipo"
+    confirm-text="Dar de Baja"
+    cancel-text="Cancelar"
+    type="danger"
+    @confirm="handleConfirmDelete"
+    @cancel="handleCancelDelete"
+  />
 </template>

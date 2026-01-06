@@ -2,6 +2,8 @@
 import { ref, onMounted, computed } from 'vue';
 import api from '../api/axios';
 import type { Personnel } from '../types';
+import Toast from '../components/Toast.vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 
 // --- ESTADO ---
 const personnelList = ref<Personnel[]>([]);
@@ -19,6 +21,51 @@ const form = ref({
   full_name: '',
   job_title: 'MECANICO' // Valor por defecto
 });
+
+// Toast notifications
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'info' as 'success' | 'error' | 'warning' | 'info'
+});
+
+const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+  toast.value = { show: true, message, type };
+};
+
+const closeToast = () => {
+  toast.value.show = false;
+};
+
+// Confirm dialog
+const confirmDialog = ref({
+  show: false,
+  message: '',
+  personId: 0
+});
+
+const showConfirmDelete = (id: number) => {
+  confirmDialog.value = {
+    show: true,
+    message: '¿Seguro que deseas desactivar a este personal?',
+    personId: id
+  };
+};
+
+const handleConfirmDelete = async () => {
+  confirmDialog.value.show = false;
+  try {
+    await api.delete(`/personnel/${confirmDialog.value.personId}`);
+    showToast('Personal desactivado correctamente', 'success');
+    fetchPersonnel();
+  } catch (error: any) {
+    showToast(error.response?.data?.message || 'Error al desactivar el personal', 'error');
+  }
+};
+
+const handleCancelDelete = () => {
+  confirmDialog.value.show = false;
+};
 
 // --- LÓGICA DE CARGA ---
 const fetchPersonnel = async () => {
@@ -65,36 +112,32 @@ const openEdit = (person: Personnel) => {
 
 // Guardar (Crear o Actualizar)
 const savePersonnel = async () => {
-  if (!form.value.full_name) return alert('El nombre es obligatorio');
+  if (!form.value.full_name) {
+    showToast('El nombre es obligatorio', 'warning');
+    return;
+  }
 
   try {
     if (isEditing.value) {
       // EDITAR (PUT)
       await api.put(`/personnel/${form.value.id}`, form.value);
-      alert('✅ Personal actualizado');
+      showToast('Personal actualizado correctamente', 'success');
     } else {
       // CREAR (POST)
       await api.post('/personnel', form.value);
-      alert('✅ Personal registrado');
+      showToast('Personal registrado correctamente', 'success');
     }
     
     showModal.value = false;
     fetchPersonnel(); // Recargar lista
   } catch (error: any) {
-    alert('❌ Error: ' + (error.response?.data?.message || 'Ocurrió un error'));
+    showToast(error.response?.data?.message || 'Error al guardar el personal', 'error');
   }
 };
 
 // Eliminar (DELETE)
 const deletePersonnel = async (id: number) => {
-  if (!confirm('¿Seguro que deseas desactivar a este personal?')) return;
-
-  try {
-    await api.delete(`/personnel/${id}`);
-    fetchPersonnel();
-  } catch (error) {
-    alert('Error al eliminar');
-  }
+  showConfirmDelete(id);
 };
 
 // Clase dinámica para las etiquetas de cargo
@@ -206,4 +249,22 @@ const getRoleBadgeClass = (role: string) => {
 
     </div>
   </div>
+
+  <Toast
+    :show="toast.show"
+    :message="toast.message"
+    :type="toast.type"
+    @close="closeToast"
+  />
+
+  <ConfirmDialog
+    :show="confirmDialog.show"
+    :message="confirmDialog.message"
+    title="Desactivar Personal"
+    confirm-text="Desactivar"
+    cancel-text="Cancelar"
+    type="danger"
+    @confirm="handleConfirmDelete"
+    @cancel="handleCancelDelete"
+  />
 </template>
