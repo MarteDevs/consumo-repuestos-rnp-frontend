@@ -6,6 +6,8 @@ import CreateOrder from '../views/CreateOrder.vue';
 import OrderDetail from '../views/OrderDetail.vue';
 import ProductInventory from '../views/ProductInventory.vue'; // <--- NUEVO
 import PersonnelManagement from '../views/PersonnelManagement.vue';
+import EquipmentManagement from '../views/EquipmentManagement.vue';
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -38,6 +40,11 @@ const router = createRouter({
       path: '/personnel',
       name: 'personnel',
       component: PersonnelManagement
+    },
+    {
+      path: '/equipment',
+      name: 'equipment',
+      component: EquipmentManagement
     }
   ]
 });

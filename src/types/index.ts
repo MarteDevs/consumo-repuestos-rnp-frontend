@@ -73,3 +73,17 @@ export interface ProductCatalog {
   unit_of_measure: string;
   product_variants: ProductVariant[];
 }
+
+
+export interface Equipment {
+  id: number;
+  internal_code: string;
+  serial_number?: string;
+  model: string;
+  brand_id: number;
+  current_location_id?: number;
+  accumulated_feet: number;
+  status: 'OPERATIVO' | 'EN_MANTENIMIENTO' | 'BAJA';
+  brands?: Brand;       // Para mostrar nombre marca (plural como en Prisma)
+  locations?: Location; // Para mostrar nombre ubicación
+}
