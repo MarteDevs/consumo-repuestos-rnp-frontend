@@ -91,10 +91,13 @@ onMounted(async () => {
             📊 Dashboard Gerencial
           </h2>
         </div>
-        <router-link to="/inventory" class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-    📦 Inventario
-  </router-link>
         <div class="mt-4 flex md:ml-4 md:mt-0">
+          <router-link to="/personnel" class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+            👷 Personal
+          </router-link>
+          <router-link to="/inventory" class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+            📦 Inventario
+          </router-link>
           <router-link to="/list" class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
             Ver Listado Completo
           </router-link>
