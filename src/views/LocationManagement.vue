@@ -4,6 +4,7 @@ import api from '../api/axios';
 import type { Location } from '../types';
 import Toast from '../components/Toast.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import Pagination from '../components/Pagination.vue';
 
 // --- ESTADO ---
 const locations = ref<Location[]>([]);
@@ -11,6 +12,14 @@ const loading = ref(true);
 const showModal = ref(false);
 const isEditing = ref(false);
 const search = ref('');
+
+// Paginación
+const pagination = ref({
+  currentPage: 1,
+  totalPages: 1,
+  total: 0,
+  limit: 10
+});
 
 // Formulario
 const form = ref({
@@ -68,13 +77,29 @@ const handleCancelDelete = () => {
 const fetchLocations = async () => {
   loading.value = true;
   try {
-    const res = await api.get(`/locations?search=${search.value}`);
-    locations.value = res.data;
+    const params = new URLSearchParams();
+    if (search.value) params.append('search', search.value);
+    params.append('page', String(pagination.value.currentPage));
+    params.append('limit', String(pagination.value.limit));
+
+    const res = await api.get(`/locations?${params.toString()}`);
+    locations.value = res.data.data;
+    pagination.value = {
+      currentPage: res.data.pagination.page,
+      totalPages: res.data.pagination.totalPages,
+      total: res.data.pagination.total,
+      limit: res.data.pagination.limit
+    };
   } catch (error) {
     console.error(error);
   } finally {
     loading.value = false;
   }
+};
+
+const handlePageChange = (page: number) => {
+  pagination.value.currentPage = page;
+  fetchLocations();
 };
 
 onMounted(() => {
@@ -185,6 +210,15 @@ const getTypeClass = (type: string) => {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        v-if="locations.length > 0"
+        :current-page="pagination.currentPage"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        @page-change="handlePageChange"
+      />
 
       <div v-if="showModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">

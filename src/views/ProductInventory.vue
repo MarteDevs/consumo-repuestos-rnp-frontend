@@ -2,12 +2,21 @@
 import { ref, onMounted, computed } from 'vue';
 import api from '../api/axios';
 import type { ProductCatalog, Brand } from '../types';
+import Pagination from '../components/Pagination.vue';
 
 // --- ESTADO ---
 const products = ref<ProductCatalog[]>([]);
 const brands = ref<Brand[]>([]);
 const loading = ref(true);
 const searchTerm = ref('');
+
+// Paginación
+const pagination = ref({
+  currentPage: 1,
+  totalPages: 1,
+  total: 0,
+  limit: 10
+});
 
 // Modales
 const showCreateModal = ref(false);
@@ -22,13 +31,29 @@ const priceForm = ref({ brand_id: 0, unit_price: 0, currency: 'PEN' });
 const fetchProducts = async () => {
   loading.value = true;
   try {
-    const res = await api.get(`/products/catalog?search=${searchTerm.value}`);
-    products.value = res.data;
+    const params = new URLSearchParams();
+    if (searchTerm.value) params.append('search', searchTerm.value);
+    params.append('page', String(pagination.value.currentPage));
+    params.append('limit', String(pagination.value.limit));
+
+    const res = await api.get(`/products/catalog?${params.toString()}`);
+    products.value = res.data.data;
+    pagination.value = {
+      currentPage: res.data.pagination.page,
+      totalPages: res.data.pagination.totalPages,
+      total: res.data.pagination.total,
+      limit: res.data.pagination.limit
+    };
   } catch (error) {
     console.error(error);
   } finally {
     loading.value = false;
   }
+};
+
+const handlePageChange = (page: number) => {
+  pagination.value.currentPage = page;
+  fetchProducts();
 };
 
 const fetchBrands = async () => {
@@ -172,6 +197,15 @@ const formatCurrency = (val: number, cur: string) =>
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        v-if="products.length > 0"
+        :current-page="pagination.currentPage"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        @page-change="handlePageChange"
+      />
 
       <div v-if="showCreateModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">

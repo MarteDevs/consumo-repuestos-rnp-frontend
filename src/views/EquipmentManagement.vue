@@ -4,6 +4,7 @@ import api from '../api/axios';
 import type { Equipment, Brand, Location } from '../types';
 import Toast from '../components/Toast.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import Pagination from '../components/Pagination.vue';
 
 // --- ESTADO ---
 const equipments = ref<Equipment[]>([]);
@@ -16,6 +17,14 @@ const isEditing = ref(false);
 // Filtros
 const search = ref('');
 const statusFilter = ref('');
+
+// Paginación
+const pagination = ref({
+  currentPage: 1,
+  totalPages: 1,
+  total: 0,
+  limit: 10
+});
 
 // Formulario
 const form = ref({
@@ -78,22 +87,29 @@ const handleCancelDelete = () => {
 const loadData = async () => {
   loading.value = true;
   try {
-    // 1. Cargar Equipos (con filtros)
     const params = new URLSearchParams();
     if (search.value) params.append('search', search.value);
     if (statusFilter.value) params.append('status', statusFilter.value);
+    params.append('page', String(pagination.value.currentPage));
+    params.append('limit', String(pagination.value.limit));
     
     const resEq = await api.get(`/equipments?${params.toString()}`);
-    equipments.value = resEq.data;
+    equipments.value = resEq.data.data;
+    pagination.value = {
+      currentPage: resEq.data.pagination.page,
+      totalPages: resEq.data.pagination.totalPages,
+      total: resEq.data.pagination.total,
+      limit: resEq.data.pagination.limit
+    };
 
-    // 2. Cargar Marcas y Ubicaciones (Solo si es la primera vez o están vacías)
+    // Cargar Marcas y Ubicaciones (Solo si es la primera vez)
     if (brands.value.length === 0) {
-      const resBrands = await api.get('/products/brands'); // Reusamos el de productos
+      const resBrands = await api.get('/products/brands');
       brands.value = resBrands.data;
     }
     if (locations.value.length === 0) {
-      const resLoc = await api.get('/locations');
-      locations.value = resLoc.data;
+      const resLoc = await api.get('/locations?limit=100'); // Traer todas las ubicaciones
+      locations.value = resLoc.data.data || resLoc.data;
     }
 
   } catch (error) {
@@ -101,6 +117,11 @@ const loadData = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const handlePageChange = (page: number) => {
+  pagination.value.currentPage = page;
+  loadData();
 };
 
 onMounted(() => {
@@ -230,7 +251,7 @@ const getStatusClass = (status: string) => {
                 <div class="text-xs text-gray-500">S/N: {{ eq.serial_number || '---' }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                📍 {{ eq.locations?.name || 'Sin asignar' }}
+                {{ eq.locations?.name || 'Sin asignar' }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-center font-mono">
                 {{ eq.accumulated_feet }}
@@ -252,72 +273,14 @@ const getStatusClass = (status: string) => {
         </table>
       </div>
 
-      <div v-if="showModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
-          <h3 class="text-lg font-bold text-gray-900 mb-4">{{ isEditing ? 'Editar Equipo' : 'Nuevo Equipo' }}</h3>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Código Interno *</label>
-              <input v-model="form.internal_code" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2" placeholder="Ej: 1011-23">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Marca *</label>
-              <select v-model="form.brand_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2">
-                <option :value="0">Seleccione...</option>
-                <option v-for="b in brands" :key="b.id" :value="b.id">{{ b.name }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Modelo *</label>
-              <input v-model="form.model" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2" placeholder="Ej: JACK LEG">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Número de Serie</label>
-              <input v-model="form.serial_number" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2" placeholder="Opcional">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Ubicación Inicial</label>
-              <select v-model="form.current_location_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2">
-                <option :value="0">Sin asignar...</option>
-                <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Estado</label>
-              <select v-model="form.status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2">
-                <option value="OPERATIVO">OPERATIVO</option>
-                <option value="EN_MANTENIMIENTO">EN MANTENIMIENTO</option>
-                <option value="BAJA">BAJA</option>
-              </select>
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700">Horómetro Inicial (Pies)</label>
-              <input 
-                v-model.number="form.accumulated_feet" 
-                type="number" 
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2 bg-gray-50" 
-                :readonly="isEditing"
-                title="Para modificar esto, use una Orden de Trabajo"
-              >
-              <p v-if="isEditing" class="text-xs text-gray-500 mt-1">El horómetro solo se actualiza mediante reportes de consumo.</p>
-            </div>
-
-          </div>
-
-          <div class="mt-6 flex justify-end gap-3">
-            <button @click="showModal = false" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded border border-gray-300 shadow-sm transition-colors">Cancelar</button>
-            <button @click="saveEquipment" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow-sm transition-colors">{{ isEditing ? 'Guardar Cambios' : 'Registrar Equipo' }}</button>
-          </div>
-        </div>
-      </div>
+      <Pagination
+        v-if="equipments.length > 0"
+        :current-page="pagination.currentPage"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        @page-change="handlePageChange"
+      />
 
     </div>
   </div>

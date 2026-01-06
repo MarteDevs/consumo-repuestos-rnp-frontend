@@ -4,6 +4,7 @@ import api from '../api/axios';
 import type { Personnel } from '../types';
 import Toast from '../components/Toast.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import Pagination from '../components/Pagination.vue';
 
 // --- ESTADO ---
 const personnelList = ref<Personnel[]>([]);
@@ -14,6 +15,14 @@ const isEditing = ref(false);
 // Filtros
 const search = ref('');
 const roleFilter = ref('');
+
+// Paginación
+const pagination = ref({
+  currentPage: 1,
+  totalPages: 1,
+  total: 0,
+  limit: 10
+});
 
 // Formulario
 const form = ref({
@@ -71,18 +80,30 @@ const handleCancelDelete = () => {
 const fetchPersonnel = async () => {
   loading.value = true;
   try {
-    // Enviamos los filtros al backend
     const params = new URLSearchParams();
     if (search.value) params.append('search', search.value);
     if (roleFilter.value) params.append('role', roleFilter.value);
+    params.append('page', String(pagination.value.currentPage));
+    params.append('limit', String(pagination.value.limit));
 
     const res = await api.get(`/personnel?${params.toString()}`);
-    personnelList.value = res.data;
+    personnelList.value = res.data.data;
+    pagination.value = {
+      currentPage: res.data.pagination.page,
+      totalPages: res.data.pagination.totalPages,
+      total: res.data.pagination.total,
+      limit: res.data.pagination.limit
+    };
   } catch (error) {
     console.error(error);
   } finally {
     loading.value = false;
   }
+};
+
+const handlePageChange = (page: number) => {
+  pagination.value.currentPage = page;
+  fetchPersonnel();
 };
 
 onMounted(() => {
@@ -215,6 +236,15 @@ const getRoleBadgeClass = (role: string) => {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        v-if="personnelList.length > 0"
+        :current-page="pagination.currentPage"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        @page-change="handlePageChange"
+      />
 
       <div v-if="showModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">

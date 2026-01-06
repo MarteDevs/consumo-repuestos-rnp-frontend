@@ -2,9 +2,19 @@
 import { ref, onMounted } from 'vue';
 import api from '../api/axios';
 import type { Order } from '../types';
+import Pagination from '../components/Pagination.vue';
 
 const orders = ref<Order[]>([]);
 const loading = ref(true);
+const searchTerm = ref('');
+
+// Paginación
+const pagination = ref({
+  currentPage: 1,
+  totalPages: 1,
+  total: 0,
+  limit: 10
+});
 
 // Función para formatear fechas (Ej: 02/01/2026)
 const formatDate = (dateString: string) => {
@@ -14,15 +24,36 @@ const formatDate = (dateString: string) => {
 };
 
 // Cargar datos
-onMounted(async () => {
+const fetchOrders = async () => {
+  loading.value = true;
   try {
-    const res = await api.get('/orders');
-    orders.value = res.data;
+    const params = new URLSearchParams();
+    if (searchTerm.value) params.append('search', searchTerm.value);
+    params.append('page', String(pagination.value.currentPage));
+    params.append('limit', String(pagination.value.limit));
+
+    const res = await api.get(`/orders?${params.toString()}`);
+    orders.value = res.data.data;
+    pagination.value = {
+      currentPage: res.data.pagination.page,
+      totalPages: res.data.pagination.totalPages,
+      total: res.data.pagination.total,
+      limit: res.data.pagination.limit
+    };
   } catch (error) {
     console.error("Error cargando historial", error);
   } finally {
     loading.value = false;
   }
+};
+
+const handlePageChange = (page: number) => {
+  pagination.value.currentPage = page;
+  fetchOrders();
+};
+
+onMounted(() => {
+  fetchOrders();
 });
 </script>
 
@@ -46,6 +77,17 @@ onMounted(async () => {
             + Nueva Orden
           </router-link>
         </div>
+      </div>
+
+      <div class="mt-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex gap-2">
+        <input 
+          v-model="searchTerm" 
+          @keyup.enter="fetchOrders"
+          type="text" 
+          placeholder="Buscar por N° POOT o Código de Equipo..." 
+          class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+        >
+        <button @click="fetchOrders" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md font-medium text-gray-700">Buscar</button>
       </div>
 
       <div class="mt-8 flow-root">
@@ -98,6 +140,15 @@ onMounted(async () => {
           </div>
         </div>
       </div>
+
+      <Pagination
+        v-if="orders.length > 0"
+        :current-page="pagination.currentPage"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        @page-change="handlePageChange"
+      />
 
     </div>
   </div>
