@@ -7,6 +7,7 @@ import OrderDetail from '../views/OrderDetail.vue';
 import ProductInventory from '../views/ProductInventory.vue'; // <--- NUEVO
 import PersonnelManagement from '../views/PersonnelManagement.vue';
 import EquipmentManagement from '../views/EquipmentManagement.vue';
+import LocationManagement from '../views/LocationManagement.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,6 +46,11 @@ const router = createRouter({
       path: '/equipment',
       name: 'equipment',
       component: EquipmentManagement
+    },
+    {
+      path: '/location',
+      name: 'location',
+      component: LocationManagement
     }
   ]
 });

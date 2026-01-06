@@ -92,6 +92,9 @@ onMounted(async () => {
           </h2>
         </div>
         <div class="mt-4 flex md:ml-4 md:mt-0">
+          <router-link to="/location" class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+            📍 Ubicaciones
+          </router-link>
           <router-link to="/equipment" class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
             🚜 Equipos
           </router-link>
