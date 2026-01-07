@@ -48,18 +48,19 @@ const newItemQuantity = ref(1);
 onMounted(async () => {
   try {
     // Realizamos 3 peticiones simultáneas para cargar todo rápido
+    // Usamos limit=1000 para traer todos los registros necesarios
     const [resEq, resPers, resLoc] = await Promise.all([
-      api.get('/equipments'),
-      api.get('/personnel'),
-      api.get('/locations')
+      api.get('/equipments?limit=1000'),
+      api.get('/personnel?limit=1000'),
+      api.get('/locations?limit=1000')
     ]);
 
-    // 1. Guardamos Equipos y Ubicaciones
-    equipments.value = resEq.data;
-    locations.value = resLoc.data;
+    // 1. Guardamos Equipos y Ubicaciones (ahora vienen en .data.data por la paginación)
+    equipments.value = resEq.data.data || resEq.data;
+    locations.value = resLoc.data.data || resLoc.data;
 
     // 2. Procesamos el Personal: Separamos Mecánicos de Supervisores
-    const allPersonnel = resPers.data as Personnel[];
+    const allPersonnel = (resPers.data.data || resPers.data) as Personnel[];
     mechanics.value = allPersonnel.filter(p => p.job_title === 'MECANICO');
     supervisors.value = allPersonnel.filter(p => p.job_title === 'SUPERVISOR');
 
