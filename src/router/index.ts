@@ -8,6 +8,8 @@ import ProductInventory from '../views/ProductInventory.vue'; // <--- NUEVO
 import PersonnelManagement from '../views/PersonnelManagement.vue';
 import EquipmentManagement from '../views/EquipmentManagement.vue';
 import LocationManagement from '../views/LocationManagement.vue';
+import ImportData from '../views/ImportData.vue';
+import SearchPOOT from '../views/SearchPOOT.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -51,6 +53,16 @@ const router = createRouter({
       path: '/location',
       name: 'location',
       component: LocationManagement
+    },
+    {
+      path: '/import',
+      name: 'import',
+      component: ImportData
+    },
+    {
+      path: '/search-poot',
+      name: 'search-poot',
+      component: SearchPOOT
     }
   ]
 });

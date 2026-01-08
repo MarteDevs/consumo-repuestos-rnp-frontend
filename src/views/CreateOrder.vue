@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useOrderStore } from '../stores/orderStore';
 import api from '../api/axios';
 // Importamos los nuevos tipos definidos
 import type { Product, Equipment, Personnel, Location } from '../types';
+
+const route = useRoute();
 
 // --- ESTADO ---
 const store = useOrderStore();
@@ -39,6 +42,12 @@ const form = ref({
   meter_reading_current: 0
 });
 
+// Búsqueda de POOT histórico (solo consulta)
+const pootSearchQuery = ref('');
+const pootHistoricalData = ref<any[]>([]);
+const showPootPreview = ref(false);
+const loadingPootPreview = ref(false);
+
 // Formulario Repuesto (Buscador)
 const newItemSearch = ref('');
 const selectedProduct = ref<Product | null>(null);
@@ -68,7 +77,153 @@ onMounted(async () => {
     console.error("Error cargando datos maestros", error);
     message.value = { text: '❌ Error conectando con el servidor. Verifica el backend.', type: 'error' };
   }
+
+  // Cargar datos desde POOT si viene desde SearchPOOT
+  if (route.query.loadPoot) {
+    await loadFromPoot(String(route.query.loadPoot));
+  }
 });
+
+// Autocompletar desde POOT histórico
+const loadFromPoot = async (pootNumber: string) => {
+  try {
+    const res = await api.get(`/import/search/poot?poot=${pootNumber}`);
+    const data = res.data;
+    
+    if (data.length === 0) {
+      message.value = { text: 'No se encontraron datos para este POOT', type: 'error' };
+      return;
+    }
+
+    // Autocompletar formulario
+    const firstItem = data[0];
+    
+    // Buscar equipo por código interno
+    if (firstItem.equipo) {
+      const equipment = equipments.value.find(e => 
+        e.internal_code?.toLowerCase().includes(firstItem.equipo.toLowerCase())
+      );
+      if (equipment) {
+        form.value.equipment_id = equipment.id;
+      }
+    }
+
+    // Tipo de mantenimiento
+    if (firstItem.tipo_manten) {
+      const tipo = firstItem.tipo_manten.toUpperCase();
+      if (['CORRECTIVO', 'PREVENTIVO', 'RELLENADO'].includes(tipo)) {
+        form.value.maintenance_type = tipo;
+      }
+    }
+
+    // Área de destino
+    if (firstItem.area_pedido_destino) {
+      const location = locations.value.find(l => 
+        l.name?.toLowerCase().includes(firstItem.area_pedido_destino.toLowerCase())
+      );
+      if (location) {
+        form.value.location_id = location.id;
+      }
+    }
+
+    // Buscar mecánico por código o nombre
+    if (firstItem.cod_trabajador || firstItem.go_userid) {
+      const searchTerm = (firstItem.cod_trabajador || firstItem.go_userid).toLowerCase();
+      const mechanic = mechanics.value.find(m => 
+        m.full_name?.toLowerCase().includes(searchTerm)
+      );
+      if (mechanic) {
+        form.value.mechanic_id = mechanic.id;
+      }
+    }
+
+    // Cargar repuestos al carrito
+    store.clearItems();
+    let loadedCount = 0;
+    let notFoundCount = 0;
+    
+    for (const item of data) {
+      if (item.material) {
+        try {
+          // Buscar por nombre del producto (primera parte antes del |)
+          const searchName = item.material.split('|')[0].trim();
+          const prodRes = await api.get(`/products?search=${searchName}`);
+          
+          if (prodRes.data && prodRes.data.length > 0) {
+            const product = prodRes.data[0];
+            store.addItem({
+              variant_id: product.id,
+              name: product.full_name || item.material,
+              price: Number(item.precio_igv || product.price || 0),
+              currency: item.moneda || product.currency || 'PEN',
+              quantity: Number(item.cantidad || 1),
+              total: Number(item.total || (Number(item.cantidad) * Number(item.precio_igv)) || 0)
+            });
+            loadedCount++;
+          } else {
+            // Si no se encuentra en el catálogo, mostrar advertencia
+            console.warn(`Producto no encontrado en catálogo: ${item.material}`);
+            notFoundCount++;
+          }
+        } catch (err) {
+          console.error('Error cargando producto:', item.material, err);
+          notFoundCount++;
+        }
+      }
+    }
+    
+    // Mensaje informativo
+    let messageText = `✅ Datos cargados desde POOT ${pootNumber}`;
+    if (loadedCount > 0) {
+      messageText += ` - ${loadedCount} repuestos cargados`;
+    }
+    if (notFoundCount > 0) {
+      messageText += ` ⚠️ ${notFoundCount} productos no encontrados en catálogo`;
+    }
+
+    message.value = { 
+      text: messageText, 
+      type: 'success' 
+    };
+    
+    // Scroll al inicio para ver el mensaje
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+  } catch (error) {
+    console.error('Error cargando POOT:', error);
+    message.value = { text: 'Error al cargar datos del POOT', type: 'error' };
+  }
+};
+
+// Buscar POOT histórico para vista previa (sin autocompletar)
+const searchPootPreview = async () => {
+  if (pootSearchQuery.value.length < 3) {
+    pootHistoricalData.value = [];
+    showPootPreview.value = false;
+    return;
+  }
+  
+  loadingPootPreview.value = true;
+  try {
+    const res = await api.get(`/import/search/poot?poot=${pootSearchQuery.value}`);
+    pootHistoricalData.value = res.data;
+    showPootPreview.value = pootHistoricalData.value.length > 0;
+  } catch (error) {
+    console.error('Error buscando POOT:', error);
+    pootHistoricalData.value = [];
+    showPootPreview.value = false;
+  } finally {
+    loadingPootPreview.value = false;
+  }
+};
+
+// Usar datos del POOT histórico para autocompletar
+const usePootData = async () => {
+  if (pootHistoricalData.value.length === 0) return;
+  await loadFromPoot(pootHistoricalData.value[0].poot_b);
+  pootSearchQuery.value = '';
+  showPootPreview.value = false;
+};
 
 // --- WATCHERS Y FUNCIONES ---
 
@@ -193,6 +348,87 @@ const submitOrder = async () => {
 
       <div v-if="message" :class="`mb-4 p-4 rounded-md font-medium border ${message.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`">
         {{ message.text }}
+      </div>
+
+      <!-- Búsqueda de POOT Histórico -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <h3 class="text-sm font-semibold text-blue-900">Consultar POOT Histórico</h3>
+        </div>
+        <div class="flex gap-2">
+          <div class="flex-grow relative">
+            <input 
+              v-model="pootSearchQuery" 
+              @input="searchPootPreview"
+              type="text" 
+              placeholder="Buscar POOT anterior (ej: 23887 o POOT|23887)" 
+              class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2"
+            >
+            <div v-if="loadingPootPreview" class="absolute right-3 top-2.5">
+              <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de datos históricos -->
+        <div v-if="showPootPreview && pootHistoricalData.length > 0" class="mt-4 bg-white rounded-lg border border-blue-200 overflow-hidden">
+          <div class="bg-blue-100 px-4 py-3 border-b border-blue-200">
+            <div class="flex justify-between items-center">
+              <div>
+                <div class="text-sm font-bold text-blue-900">{{ pootHistoricalData[0].poot_b }}</div>
+                <div class="text-xs text-blue-700 mt-1">
+                  <span class="font-medium">Equipo:</span> {{ pootHistoricalData[0].equipo }}
+                </div>
+                <div class="text-xs text-blue-700">
+                  <span class="font-medium">Área:</span> {{ pootHistoricalData[0].area_pedido_destino }}
+                </div>
+              </div>
+              <div class="text-xs text-blue-700">
+                <span class="font-semibold">{{ pootHistoricalData.length }}</span> items
+              </div>
+            </div>
+          </div>
+          
+          <div class="max-h-64 overflow-y-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50 sticky top-0">
+                <tr>
+                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">#</th>
+                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Código</th>
+                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Material</th>
+                  <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700">Cant.</th>
+                  <th class="px-3 py-2 text-right text-xs font-semibold text-gray-700">Precio Unit.</th>
+                  <th class="px-3 py-2 text-right text-xs font-semibold text-gray-700">Total</th>
+                  <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700">Moneda</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="(item, idx) in pootHistoricalData" :key="idx" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 text-xs text-gray-500">{{ idx + 1 }}</td>
+                  <td class="px-3 py-2 text-xs text-gray-900 font-mono">{{ item.codigo }}</td>
+                  <td class="px-3 py-2 text-xs text-gray-700">{{ item.material }}</td>
+                  <td class="px-3 py-2 text-xs text-center font-semibold text-gray-900">{{ item.cantidad }}</td>
+                  <td class="px-3 py-2 text-xs text-right text-gray-700">{{ Number(item.precio_igv).toFixed(2) }}</td>
+                  <td class="px-3 py-2 text-xs text-right font-semibold text-gray-900">
+                    {{ (Number(item.cantidad) * Number(item.precio_igv)).toFixed(2) }}
+                  </td>
+                  <td class="px-3 py-2 text-xs text-center">
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" 
+                          :class="item.moneda === 'PEN' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'">
+                      {{ item.moneda }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <div class="bg-white shadow rounded-lg mb-6 overflow-hidden border border-gray-200">
