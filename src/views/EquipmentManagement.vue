@@ -167,18 +167,36 @@ const saveEquipment = async () => {
   }
 
   try {
+    // Preparar datos según sea edición o creación
+    const dataToSend = {
+      internal_code: form.value.internal_code,
+      serial_number: form.value.serial_number || '',
+      model: form.value.model,
+      brand_id: Number(form.value.brand_id),
+      current_location_id: form.value.current_location_id ? Number(form.value.current_location_id) : null,
+      status: form.value.status,
+      // accumulated_feet solo para creación, no para edición
+      ...(isEditing.value ? {} : { accumulated_feet: Number(form.value.accumulated_feet) || 0 })
+    };
+
     if (isEditing.value) {
       // EDITAR
-      await api.put(`/equipments/${form.value.id}`, form.value);
+      console.log('Enviando datos de actualización:', dataToSend);
+      const response = await api.put(`/equipments/${form.value.id}`, dataToSend);
+      console.log('Respuesta de actualización:', response.data);
       showToast('Equipo actualizado correctamente', 'success');
     } else {
       // CREAR
-      await api.post('/equipments', form.value);
+      console.log('Enviando datos de creación:', dataToSend);
+      const response = await api.post('/equipments', dataToSend);
+      console.log('Respuesta de creación:', response.data);
       showToast('Equipo registrado correctamente', 'success');
     }
     showModal.value = false;
     loadData();
   } catch (error: any) {
+    console.error('Error completo:', error);
+    console.error('Respuesta del servidor:', error.response?.data);
     showToast(error.response?.data?.message || 'Error al guardar el equipo', 'error');
   }
 };
@@ -291,6 +309,123 @@ const getStatusClass = (status: string) => {
     :type="toast.type"
     @close="closeToast"
   />
+
+  <!-- Modal de Crear/Editar Equipo -->
+  <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity" @click="showModal = false"></div>
+
+    <div class="relative bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6 z-10">
+      <div class="mb-4">
+        <h3 class="text-lg font-semibold text-gray-900" id="modal-title">
+          {{ isEditing ? 'Editar Equipo' : 'Nuevo Equipo' }}
+        </h3>
+        <p class="text-sm text-gray-500 mt-1">
+          {{ isEditing ? 'Modifica los datos del equipo seleccionado' : 'Registra un nuevo equipo en el sistema' }}
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Código Interno *</label>
+            <input 
+              v-model="form.internal_code" 
+              type="text" 
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+              placeholder="Ej: RNP-001"
+            >
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Número de Serie</label>
+            <input 
+              v-model="form.serial_number" 
+              type="text" 
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+              placeholder="Ej: SN123456789"
+            >
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Modelo *</label>
+            <input 
+              v-model="form.model" 
+              type="text" 
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+              placeholder="Ej: D6T"
+            >
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Marca *</label>
+            <select 
+              v-model="form.brand_id" 
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+            >
+              <option value="0">Seleccionar marca...</option>
+              <option v-for="brand in brands" :key="brand.id" :value="brand.id">
+                {{ brand.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Ubicación Actual</label>
+            <select 
+              v-model="form.current_location_id" 
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+            >
+              <option value="0">Sin asignar</option>
+              <option v-for="loc in locations" :key="loc.id" :value="loc.id">
+                {{ loc.name }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Estado</label>
+            <select 
+              v-model="form.status" 
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+            >
+              <option value="OPERATIVO">Operativo</option>
+              <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
+              <option value="BAJA">De Baja</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Horómetro Acumulado (pies)</label>
+          <input 
+            v-model.number="form.accumulated_feet" 
+            type="number" 
+            :readonly="isEditing"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+            :class="{ 'bg-gray-100 text-gray-500': isEditing }"
+            placeholder="0"
+          >
+          <p v-if="isEditing" class="text-xs text-gray-500 mt-1">El horómetro solo se puede actualizar desde las órdenes de trabajo</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex gap-3 justify-end">
+        <button 
+          @click="showModal = false"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button 
+          @click="saveEquipment"
+          class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+        >
+          {{ isEditing ? 'Actualizar' : 'Crear' }}
+        </button>
+      </div>
+    </div>
+  </div>
 
   <ConfirmDialog
     :show="confirmDialog.show"

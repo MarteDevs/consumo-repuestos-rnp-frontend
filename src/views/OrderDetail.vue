@@ -108,48 +108,62 @@ onMounted(async () => {
       </div>
 
       <div class="px-6 py-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Repuestos Utilizados</h3>
-        <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-          <table class="min-w-full divide-y divide-gray-300">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Descripción</th>
-                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Marca</th>
-                <th class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Cant.</th>
-                <th class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">P. Unit</th>
-                <th class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Total</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white">
-              <tr v-for="item in order.consumption_details" :key="item.id">
-                <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
-                  {{ item.variant?.catalog?.name || 'Item desconocido' }}
-                </td>
-                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                  {{ item.variant?.brand?.name || '-' }}
-                </td>
-                <td class="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-900">
-                  {{ item.quantity }}
-                </td>
-                <td class="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500">
-                  {{ formatCurrency(Number(item.recorded_unit_price), item.recorded_currency) }}
-                </td>
-                <td class="whitespace-nowrap px-3 py-4 text-sm text-right font-bold text-gray-900">
-                  {{ formatCurrency(Number(item.total_line_cost), item.recorded_currency) }}
-                </td>
-              </tr>
-            </tbody>
-            <tfoot class="bg-gray-50">
-              <tr>
-                <td colspan="4" class="py-4 pr-4 text-right text-sm font-bold text-gray-900">COSTO TOTAL:</td>
-                <td class="py-4 px-3 text-right text-lg font-bold text-indigo-600">
-                   {{ formatCurrency(order.total_cost) }}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
+  <h3 class="text-lg font-semibold text-gray-800 mb-4">Repuestos Utilizados</h3>
+  <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+    <table class="min-w-full divide-y divide-gray-300">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Descripción</th>
+          <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Marca</th>
+          <th class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Cant.</th>
+          <th class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Horo. Ant. Ítem</th>
+          <th class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Horo. Act. Ítem</th>
+          <th class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Vida Útil (pies)</th>
+          <th class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">P. Unit</th>
+          <th class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Total</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200 bg-white">
+        <tr v-for="item in order.consumption_details" :key="item.id">
+          <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+            {{ item.variant?.catalog?.name || 'Item desconocido' }}
+          </td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+            {{ item.variant?.brand?.name || '-' }}
+          </td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-900">
+            {{ item.quantity }}
+          </td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500">
+            {{ item.meter_reading_previous_item ?? '-' }}
+          </td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500">
+            {{ item.meter_reading_current_item ?? '-' }}
+          </td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-900">
+            {{ item.life_feet ?? '-' }}
+          </td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500">
+            {{ formatCurrency(Number(item.recorded_unit_price), item.recorded_currency) }}
+          </td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-right font-bold text-gray-900">
+            {{ formatCurrency(Number(item.total_line_cost), item.recorded_currency) }}
+          </td>
+        </tr>
+      </tbody>
+      <tfoot class="bg-gray-50">
+        <tr>
+          <td colspan="7" class="py-4 pr-4 text-right text-sm font-bold text-gray-900">
+            COSTO TOTAL:
+          </td>
+          <td class="py-4 px-3 text-right text-lg font-bold text-indigo-600">
+             {{ formatCurrency(order.total_cost) }}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
 
       <div class="bg-gray-50 px-6 py-4 flex justify-between items-center border-t border-gray-200">
         <router-link to="/" class="text-indigo-600 hover:text-indigo-900 font-medium text-sm">
